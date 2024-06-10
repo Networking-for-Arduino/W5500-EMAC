@@ -3,7 +3,11 @@
 #include <SPI.h>
 
 #ifndef W5500_CS
+#ifdef ARDUINO_ARCH_MBED_PORTENTA
+#define W5500_CS D5  // MKR ETH shield CS
+#else
 #define W5500_CS PIN_SPI_SS
+#endif
 #endif
 
 #define W5500_BUFF_ALIGNMENT              4U
