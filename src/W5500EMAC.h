@@ -156,7 +156,7 @@ private:
   int linkStatusTaskHandle = 0;
 
   EMACMemoryManager* memoryManager = nullptr;
-  rtos::Mutex wifiLockMutex;
+  rtos::Mutex ethLockMutex;
 
   emac_link_input_cb_t emac_link_input_cb;
   emac_link_state_change_cb_t emac_link_state_cb;

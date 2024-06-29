@@ -1,6 +1,10 @@
+
 #include "W5500EMAC.h"
 #include <Arduino.h>
 #include <SPI.h>
+
+#include <EthernetInterface.h>
+#include <mbed_events.h>
 
 #ifndef W5500_CS
 #ifdef ARDUINO_ARCH_MBED_PORTENTA
@@ -162,33 +166,39 @@ bool W5500EMAC::link_out(emac_mem_buf_t *buf) {
 
   uint16_t len = memoryManager->get_len(buf);
   uint8_t *data = (uint8_t*) (memoryManager->get_ptr(buf));
+  ethLockMutex.lock();
   spi.beginTransaction(SPI_ETHERNET_SETTINGS);
   bool ret = driver.sendFrame(data, len) == len;
   spi.endTransaction();
   memoryManager->free(buf);
+  ethLockMutex.unlock();
 
   return ret;
 }
 
 void W5500EMAC::linkStatusTask() {
+  ethLockMutex.lock();
   spi.beginTransaction(SPI_ETHERNET_SETTINGS);
-  static bool linked = false;
+  static bool linked = !driver.isLinked();
   if (linked != driver.isLinked()) {
     linked = driver.isLinked();
     emac_link_state_cb(linked);
   }
   spi.endTransaction();
+  ethLockMutex.unlock();
 }
 
 void W5500EMAC::receiveTask() {
   if (!emac_link_input_cb)
     return;
+  ethLockMutex.lock();
   spi.beginTransaction(SPI_ETHERNET_SETTINGS);
   emac_mem_buf_t *buf = driver.readFrame(memoryManager);
   spi.endTransaction();
   if (buf != NULL) {
     emac_link_input_cb(buf);
   }
+  ethLockMutex.unlock();
 }
 
 /**
@@ -246,4 +256,10 @@ void W5500EMAC::set_memory_manager(EMACMemoryManager &mem_mngr) {
 
 EMAC& EMAC::get_default_instance() {
   return W5500EMAC::get_instance();
+}
+
+EthInterface *EthInterface::get_target_default_instance()
+{
+  static EthernetInterface ethernet;
+  return &ethernet;
 }
